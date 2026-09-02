@@ -20,12 +20,12 @@ products = [
     Product(id=4, name="study table", description= "A long lasting study table", price=399.99, quantity=12),
 ]
 
-def get_db():     # session close
-    db = Session()
+def get_db():     # We use FastAPI's Dependency Injection system via Depends(get_db). This manages the lifecycle of our SQLAlchemy database sessions per request—opening a session when a client hits an endpoint, injecting it into the route function, and guaranteeing it closes safely in a finally block to prevent connection leaks.
+    db = Session()   # creates a new session for the request.
     try:
-        yield db
+        yield db   # hands the session over to your API route path operation function.
     finally:
-        db.close()
+        db.close()  # ensures that the session is safely closed after the request is completed, preventing connection leaks to your PostgreSQL database.
 
 
 
@@ -62,15 +62,20 @@ def get_product_by_id(id: int, db: Session = Depends(get_db)):   # here GET endp
          return db_product
     return "products not found"  # if no match is found it returns "products not found"
 
+# CRUD OPERATION BELOW 
 
 # add a new product in our Product list
 @app.post("/product")            
-def add_product(product: Product):   # here POST endpoint use to create a new resource/product, it takes a request body validate against the "Product" schema/class, 
-    products.append(product)         # appends it our products list, and return the newly added product back to the client
+def add_product(product: Product, db: Session = Depends(get_db)):  # pydantic model
+    db.add(database.Product(**product.model_dump()))  # here converting pydantic model to database model
+    db.commit()      # use to comit into database
     return product
+
+
+
 # update product logic
-@app.put("/product")
-def update_product(id: int, product: Product):  # PUT endpoint use to update the product, it takes a request body validate against the "Product" schema
+#@app.put("/product")
+#def update_product(id: int, product: Product):  # PUT endpoint use to update the product, it takes a request body validate against the "Product" schema
     for i in range(len(products)):             # iterates the products list, matches with product ID and update those product by return product added sccessfully
         if products[i].id == id:
             products[i] = product
@@ -78,9 +83,28 @@ def update_product(id: int, product: Product):  # PUT endpoint use to update the
     return "No product found"                   # if no matche is found it returns product not found
 
 
+
+# update the product 
+@app.put("/product")
+def update_product(id: int, product: Product, db: Session = Depends(get_db)):
+    db_product = db.query(database.Product).filter(database.Product.id == id).first()
+    if db_product:
+        db_product.name = product.name
+        db_product.description = product.description
+        db_product.price = product.price
+        db_product.quantity = product.quantity
+        db.commit()
+        return "Product updated"
+    else:
+        return "No product found"
+
+
+
+
+
 # delete product logic
-@app.delete("/product")            
-def delete_product(id: int):     #DELETE endpoint uses to delete the product,it iterates through the product list, looks product whose id matches the requested int and delete the product and return "Product deleted"
+#@app.delete("/product")            
+#def delete_product(id: int):     #DELETE endpoint uses to delete the product,it iterates through the product list, looks product whose id matches the requested int and delete the product and return "Product deleted"
     for i in range(len(products)):
         if products[i].id == id:
             del products[i]
@@ -89,3 +113,16 @@ def delete_product(id: int):     #DELETE endpoint uses to delete the product,it 
 
     
 
+# Write a function to Delete the product from Postgres database:
+
+@app.delete("/product")
+
+def delete_product(id: int, db: Session = Depends(get_db)):
+
+    db_product = db.query(database.Product).filter(database.Product.id == id).first()
+    if db_product:
+        db.delete(db_product)
+        db.commit()
+        return "Product deleted"
+    else:
+        return "Product not found"
