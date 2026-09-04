@@ -1,10 +1,18 @@
 #In this code, we are building a basic backend REST API using FASTAPI in python, we are managing a mock product inventory store in temporarily in a python list
 from fastapi import Depends, FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from models import Product
 from config import Session, engine  # import database configuration from config.py
 import database   # database models (from database.py).
 
 app = FastAPI()
+app.add_middleware(        #CORS connect frontend to backend server
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"]
+)
 database.Base.metadata.create_all(bind=engine) # acts as an automated table creation step on startup
 
 @app.get("/")
@@ -47,7 +55,7 @@ def init_db():     # written function to commit data into database by mapping th
 init_db()
 
 # logic for fetching all the products
-@app.get("/products")       # GET endpoint retrieves and returns the entire list of products stored in the products array
+@app.get("/products/")       # GET endpoint retrieves and returns the entire list of products stored in the products array
 def get_all_products(db: Session = Depends(get_db)):
     db_products = db.query(database.Product).all()
 
@@ -65,7 +73,7 @@ def get_product_by_id(id: int, db: Session = Depends(get_db)):   # here GET endp
 # CRUD OPERATION BELOW 
 
 # add a new product in our Product list
-@app.post("/products")            
+@app.post("/products/")            
 def add_product(product: Product, db: Session = Depends(get_db)):  # pydantic model
     db.add(database.Product(**product.model_dump()))  # here converting pydantic model to database model
     db.commit()      # use to comit into database
@@ -85,7 +93,7 @@ def add_product(product: Product, db: Session = Depends(get_db)):  # pydantic mo
 
 
 # update the product 
-@app.put("/products")
+@app.put("/products/{id}")
 def update_product(id: int, product: Product, db: Session = Depends(get_db)):
     db_product = db.query(database.Product).filter(database.Product.id == id).first()
     if db_product:
@@ -115,7 +123,7 @@ def update_product(id: int, product: Product, db: Session = Depends(get_db)):
 
 # Write a function to Delete the product from Postgres database:
 
-@app.delete("/products")
+@app.delete("/products/{id}")
 
 def delete_product(id: int, db: Session = Depends(get_db)):
 
