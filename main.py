@@ -54,7 +54,7 @@ def get_all_products(db: Session = Depends(get_db)):
    
     return db_products
 # fetch by id
-@app.get("/product/{id}") 
+@app.get("/products/{id}") 
 def get_product_by_id(id: int, db: Session = Depends(get_db)):   # here GET endpoint use a dynamic path parameter (id). It iterates through the products list, 
                               # looks product whose ID matches the requested integer, and return that specific product
     db_product = db.query(database.Product).filter(database.Product.id == id).first()
@@ -65,7 +65,7 @@ def get_product_by_id(id: int, db: Session = Depends(get_db)):   # here GET endp
 # CRUD OPERATION BELOW 
 
 # add a new product in our Product list
-@app.post("/product")            
+@app.post("/products")            
 def add_product(product: Product, db: Session = Depends(get_db)):  # pydantic model
     db.add(database.Product(**product.model_dump()))  # here converting pydantic model to database model
     db.commit()      # use to comit into database
@@ -85,7 +85,7 @@ def add_product(product: Product, db: Session = Depends(get_db)):  # pydantic mo
 
 
 # update the product 
-@app.put("/product")
+@app.put("/products")
 def update_product(id: int, product: Product, db: Session = Depends(get_db)):
     db_product = db.query(database.Product).filter(database.Product.id == id).first()
     if db_product:
@@ -115,7 +115,7 @@ def update_product(id: int, product: Product, db: Session = Depends(get_db)):
 
 # Write a function to Delete the product from Postgres database:
 
-@app.delete("/product")
+@app.delete("/products")
 
 def delete_product(id: int, db: Session = Depends(get_db)):
 
